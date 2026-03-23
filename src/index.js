@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 // 1. Import Routes
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import leadRoutes from './routes/leadRoutes.js';
+
 
 // 2. Import your new Error Middleware
 import { errorMiddleware } from './middlewares/errorMiddleware.js';
@@ -19,6 +21,10 @@ app.use(cors());
 app.use(express.json());
 
 // 3. Mount your Routes
+// Add this to your imports at the top
+
+// Add this with your other app.use() route statements
+app.use('/api/leads', leadRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
