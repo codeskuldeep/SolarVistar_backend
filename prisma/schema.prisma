@@ -1,0 +1,158 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUMS ---
+enum Role {
+  ADMIN
+  STAFF
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  INTERESTED
+  NOT_INTERESTED
+  CONVERTED
+}
+
+enum FollowUpMethod {
+  WHATSAPP
+  PHONE_CALL
+  EMAIL
+}
+
+enum VisitStatus {
+  PENDING
+  COMPLETED
+  RESCHEDULED
+  CANCELLED
+}
+
+// --- MODELS ---
+
+model Department {
+  id        String   @id @default(uuid())
+  name      String   @unique // e.g., 'Sales', 'Installation', etc.
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id           String      @id @default(uuid())
+  name         String
+  email        String      @unique
+  passwordHash String
+  phoneNumber  String?
+  role         Role        @default(STAFF)
+  isActive     Boolean     @default(true)
+  
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  // Relations (Disambiguated for when a user creates vs is assigned)
+  createdLeads       Lead[]        @relation("LeadCreator")
+  assignedLeads      Lead[]        @relation("LeadAssignee")
+  createdVisits      Visit[]       @relation("VisitCreator")
+  assignedVisits     Visit[]       @relation("VisitAssignee")
+  followUpsPerformed FollowUp[]
+  activityLogs       ActivityLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Lead {
+  id             String     @id @default(uuid())
+  customerName   String
+  phoneNumber    String
+  email          String?
+  address        String?
+  leadSource     String?
+  requirements   String?
+  notes          String?
+  status         LeadStatus @default(NEW)
+
+  assignedToId   String?
+  assignedTo     User?      @relation("LeadAssignee", fields: [assignedToId], references: [id])
+  
+  createdById    String?
+  createdBy      User?      @relation("LeadCreator", fields: [createdById], references: [id])
+
+  followUps      FollowUp[]
+  visits         Visit[]
+
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+model FollowUp {
+  id               String         @id @default(uuid())
+  method           FollowUpMethod
+  remarks          String?
+  nextFollowUpDate DateTime?
+  
+  leadId           String
+  lead             Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  performedById    String?
+  performedBy      User?          @relation(fields: [performedById], references: [id])
+
+  createdAt        DateTime       @default(now())
+}
+
+model Visit {
+  id              String      @id @default(uuid())
+  customerName    String
+  phoneNumber     String
+  address         String
+  visitDatetime   DateTime
+  purpose         String
+  status          VisitStatus @default(PENDING)
+
+  // Link to a lead if applicable, but can be standalone for existing customers
+  leadId          String?
+  lead            Lead?       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  assignedStaffId String?
+  assignedStaff   User?       @relation("VisitAssignee", fields: [assignedStaffId], references: [id])
+
+  // Post-Visit Updates
+  comments          String?
+  customerFeedback  String?
+  workCompleted     String?
+  issuesIdentified  String?
+  nextSteps         String?
+
+  createdById     String?
+  createdBy       User?       @relation("VisitCreator", fields: [createdById], references: [id])
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  actionType String   // e.g., 'LEAD_CREATED', 'VISIT_STATUS_UPDATED'
+  entityType String   // e.g., 'LEAD', 'VISIT', 'USER'
+  entityId   String   // The ID of the affected record
+  details    Json?    // Stores flexible payload like {"old_status": "PENDING", "new_status": "COMPLETED"}
+
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt  DateTime @default(now())
+}
