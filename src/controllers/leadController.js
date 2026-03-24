@@ -1,6 +1,7 @@
 import prisma from "../config/db.js";
 import catchAsyncError from "../middlewares/catchAsyncError.js";
 import ErrorHandler from "../utils/ErrorHandler.js";
+import ApiResponse from "../utils/ApiResponse.js";
 
 // @desc    Create a new Lead
 // @route   POST /api/leads
@@ -35,7 +36,7 @@ export const createLead = catchAsyncError(async (req, res, next) => {
     }
   });
 
-  res.status(201).json({ success: true, lead });
+  res.status(201).json(new ApiResponse(201, { lead }, "Lead created successfully"));
 });
 
 // @desc    Get leads (Admins see all, Staff see their assigned leads)
@@ -61,7 +62,7 @@ export const getLeads = catchAsyncError(async (req, res, next) => {
     }
   });
 
-  res.status(200).json({ success: true, count: leads.length, leads });
+  res.status(200).json(new ApiResponse(200, { count: leads.length, leads }, "Leads fetched successfully"));
 });
 
 // @desc    Update Lead Status
@@ -92,7 +93,7 @@ export const updateLeadStatus = catchAsyncError(async (req, res, next) => {
     data: { status },
   });
 
-  res.status(200).json({ success: true, lead: updatedLead });
+  res.status(200).json(new ApiResponse(200, { lead: updatedLead }, "Lead status updated successfully"));
 });
 
 // @desc    Add a Follow-Up to a Lead
@@ -123,5 +124,5 @@ export const addFollowUp = catchAsyncError(async (req, res, next) => {
     }
   });
 
-  res.status(201).json({ success: true, followUp });
+  res.status(201).json(new ApiResponse(201, { followUp }, "Follow-up added successfully"));
 });

@@ -1,0 +1,15 @@
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Lead not found",
+  "data": null,
+  "stack": "Error: Lead not found at... (only in development)"
+}
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Leads fetched successfully",
+  "data": {
+    "leads": [ ... ]
+  }
+}

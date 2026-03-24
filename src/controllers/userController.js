@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import prisma from "../config/db.js";
 import catchAsyncError from "../middlewares/catchAsyncError.js";
 import ErrorHandler from "../utils/ErrorHandler.js";
+import ApiResponse from "../utils/ApiResponse.js";
 
 // @desc    Create a new user (Staff or Admin)
 // @route   POST /api/users
@@ -46,17 +47,21 @@ export const createUser = catchAsyncError(async (req, res, next) => {
     }
   });
 
-  res.status(201).json({
-    success: true,
-    message: "User created successfully",
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      departmentId: user.departmentId,
-    },
-  });
+  res.status(201).json(
+    new ApiResponse(
+      201,
+      {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          departmentId: user.departmentId,
+        },
+      },
+      "User created successfully"
+    )
+  );
 });
 
 // @desc    Delete a user
@@ -78,8 +83,5 @@ export const deleteUser = catchAsyncError(async (req, res, next) => {
 
   await prisma.user.delete({ where: { id } });
 
-  res.status(200).json({
-    success: true,
-    message: "User removed successfully",
-  });
+  res.status(200).json(new ApiResponse(200, null, "User removed successfully"));
 });

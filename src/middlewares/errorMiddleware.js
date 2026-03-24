@@ -2,11 +2,11 @@ export const errorMiddleware = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.message = err.message || "Internal Server Error";
 
-  // Send clean JSON response
   res.status(err.statusCode).json({
-    success: false,
+    success: false, // Always false for errors
+    statusCode: err.statusCode,
     message: err.message,
-    // Only show stack trace in development
+    data: null, // Keep the contract consistent so frontend doesn't crash
     stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
   });
 };

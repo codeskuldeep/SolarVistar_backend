@@ -14,7 +14,7 @@ router.use(protect);
 
 router.post("/", createLead);
 router.get("/", getLeads);
-router.put("/:id/status", updateLeadStatus);
+router.patch("/:id/status", updateLeadStatus);
 router.post("/:id/followups", addFollowUp);
 
 export default router;

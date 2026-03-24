@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs"; // Make sure to use bcryptjs to match your instal
 import prisma from "../config/db.js"; 
 import catchAsyncError from "../middlewares/catchAsyncError.js";
 import ErrorHandler from "../utils/ErrorHandler.js";
+import ApiResponse from "../utils/ApiResponse.js";
 
 const generateToken = (id, role, departmentId) => {
   return jwt.sign({ id, role, departmentId }, process.env.JWT_SECRET, {
@@ -32,16 +33,21 @@ export const loginUser = catchAsyncError(async (req, res, next) => {
 
 
 
-  res.status(200).json({
-    success: true,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      departmentId: user.departmentId,
-    },
-    token: generateToken(user.id, user.role, user.departmentId),
-  });
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          departmentId: user.departmentId,
+        },
+        token: generateToken(user.id, user.role, user.departmentId),
+      },
+      "Login successful"
+    )
+  );
 });
 
