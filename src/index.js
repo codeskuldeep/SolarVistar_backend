@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import leadRoutes from './routes/leadRoutes.js';
+import visitRoutes from './routes/visitRoutes.js';
 
 
 // 2. Import your new Error Middleware
@@ -27,6 +28,9 @@ app.use(express.json());
 app.use('/api/leads', leadRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+
+
+app.use('/api/visits', visitRoutes);
 
 // Health Check
 app.get('/health', (req, res) => {

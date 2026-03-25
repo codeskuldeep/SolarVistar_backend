@@ -68,32 +68,46 @@ export const getLeads = catchAsyncError(async (req, res, next) => {
 // @desc    Update Lead Status
 // @route   PUT /api/leads/:id/status
 // @access  Private
+// @desc    Update Lead Status & Reassign
+// @route   PUT /api/leads/:id/status
+// @access  Private
 export const updateLeadStatus = catchAsyncError(async (req, res, next) => {
   const { id } = req.params;
-  const { status } = req.body; // e.g., "CONTACTED", "INTERESTED", "CONVERTED"
+  const { 
+    status,
+    assignedToId // 👈 1. Accept the new assignee ID
+  } = req.body; 
 
-  if (!status) {
-    return next(new ErrorHandler("Please provide a new status", 400));
-  }
-
-  // Find the lead first to check permissions
   const existingLead = await prisma.lead.findUnique({ where: { id } });
 
   if (!existingLead) {
     return next(new ErrorHandler("Lead not found", 404));
   }
 
-  // Security Check: Staff can only update leads assigned to them
+  // Security Check 1: Staff can only update their own leads
   if (req.user.role === "STAFF" && existingLead.assignedToId !== req.user.id) {
     return next(new ErrorHandler("Not authorized to update this lead", 403));
   }
 
+  // 🚨 Security Check 2: REASSIGNMENT GUARD
+  if (assignedToId && req.user.role !== "ADMIN") {
+    return next(new ErrorHandler("Only Admins are permitted to reassign leads", 403));
+  }
+
   const updatedLead = await prisma.lead.update({
     where: { id },
-    data: { status },
+    data: { 
+      status,
+      assignedToId // 👈 2. Tell Prisma to swap the IDs
+    },
+    include: {
+      assignedTo: { select: { name: true } }
+    }
   });
 
-  res.status(200).json(new ApiResponse(200, { lead: updatedLead }, "Lead status updated successfully"));
+  res.status(200).json(
+    new ApiResponse(200, { lead: updatedLead }, "Lead updated successfully")
+  );
 });
 
 // @desc    Add a Follow-Up to a Lead
