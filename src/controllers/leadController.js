@@ -7,13 +7,32 @@ import ApiResponse from "../utils/ApiResponse.js";
 // @route   POST /api/leads
 // @access  Private (Admin or Staff)
 export const createLead = catchAsyncError(async (req, res, next) => {
-  const { customerName, phoneNumber, email, address, requirements, notes, assignedToId } = req.body;
+  const {
+    customerName,
+    phoneNumber,
+    email,
+    address,
+    requirements,
+    notes,
+    assignedToId,
+  } = req.body;
 
+  const user = await prisma.user.findUnique({
+    where: { id: assignedToId },
+    include: { department: true },
+  });
+
+  const isFromSales = user?.department?.name === "Sales";
   // 1. Basic Validation
   if (!customerName || !phoneNumber) {
-    return next(new ErrorHandler("Customer Name and Phone Number are required", 400));
+    return next(
+      new ErrorHandler("Customer Name and Phone Number are required", 400),
+    );
   }
-
+  if (!isFromSales)
+    return next(
+      new ErrorHandler("Assigned user must be from the Sales department", 400),
+    );
   // 2. Create the Lead
   const lead = await prisma.lead.create({
     data: {
@@ -25,18 +44,20 @@ export const createLead = catchAsyncError(async (req, res, next) => {
       notes,
       // Connect the user who is logged in as the creator
       createdBy: { connect: { id: req.user.id } },
-      
+
       // If an assignee ID is provided, connect them. Otherwise, leave it unassigned.
       assignedTo: assignedToId ? { connect: { id: assignedToId } } : undefined,
     },
     // Return the names of the creator and assignee in the response
     include: {
       createdBy: { select: { name: true } },
-      assignedTo: { select: { name: true } }
-    }
+      assignedTo: { select: { name: true } },
+    },
   });
 
-  res.status(201).json(new ApiResponse(201, { lead }, "Lead created successfully"));
+  res
+    .status(201)
+    .json(new ApiResponse(201, { lead }, "Lead created successfully"));
 });
 
 // @desc    Get leads (Admins see all, Staff see their assigned leads)
@@ -52,17 +73,25 @@ export const getLeads = catchAsyncError(async (req, res, next) => {
 
   const leads = await prisma.lead.findMany({
     where: query,
-    orderBy: { createdAt: 'desc' }, // Newest leads first
+    orderBy: { createdAt: "desc" }, // Newest leads first
     include: {
       assignedTo: { select: { name: true, email: true } },
-      followUps: { 
-        orderBy: { createdAt: 'desc' },
-        take: 1 // Just grab the most recent follow-up
-      }
-    }
+      followUps: {
+        orderBy: { createdAt: "desc" },
+        take: 1, // Just grab the most recent follow-up
+      },
+    },
   });
 
-  res.status(200).json(new ApiResponse(200, { count: leads.length, leads }, "Leads fetched successfully"));
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { count: leads.length, leads },
+        "Leads fetched successfully",
+      ),
+    );
 });
 
 // @desc    Update Lead Status
@@ -73,16 +102,28 @@ export const getLeads = catchAsyncError(async (req, res, next) => {
 // @access  Private
 export const updateLeadStatus = catchAsyncError(async (req, res, next) => {
   const { id } = req.params;
-  const { 
+  const {
     status,
-    assignedToId // 👈 1. Accept the new assignee ID
-  } = req.body; 
+    assignedToId, // 👈 1. Accept the new assignee ID
+  } = req.body;
+
+  const user = await prisma.user.findUnique({
+    where: { id: assignedToId },
+    include: { department: true },
+  });
+
+  const isFromSales = user?.department?.name === "Sales";
 
   const existingLead = await prisma.lead.findUnique({ where: { id } });
 
   if (!existingLead) {
     return next(new ErrorHandler("Lead not found", 404));
   }
+
+  if (!isFromSales)
+    return next(
+      new ErrorHandler("Assigned user must be from the Sales department", 400),
+    );
 
   // Security Check 1: Staff can only update their own leads
   if (req.user.role === "STAFF" && existingLead.assignedToId !== req.user.id) {
@@ -91,23 +132,27 @@ export const updateLeadStatus = catchAsyncError(async (req, res, next) => {
 
   // 🚨 Security Check 2: REASSIGNMENT GUARD
   if (assignedToId && req.user.role !== "ADMIN") {
-    return next(new ErrorHandler("Only Admins are permitted to reassign leads", 403));
+    return next(
+      new ErrorHandler("Only Admins are permitted to reassign leads", 403),
+    );
   }
 
   const updatedLead = await prisma.lead.update({
     where: { id },
-    data: { 
+    data: {
       status,
-      assignedToId // 👈 2. Tell Prisma to swap the IDs
+      assignedToId, // 👈 2. Tell Prisma to swap the IDs
     },
     include: {
-      assignedTo: { select: { name: true } }
-    }
+      assignedTo: { select: { name: true } },
+    },
   });
 
-  res.status(200).json(
-    new ApiResponse(200, { lead: updatedLead }, "Lead updated successfully")
-  );
+  res
+    .status(200)
+    .json(
+      new ApiResponse(200, { lead: updatedLead }, "Lead updated successfully"),
+    );
 });
 
 // @desc    Add a Follow-Up to a Lead
@@ -134,9 +179,11 @@ export const addFollowUp = catchAsyncError(async (req, res, next) => {
       remarks,
       nextFollowUpDate: nextFollowUpDate ? new Date(nextFollowUpDate) : null,
       lead: { connect: { id: leadId } },
-      performedBy: { connect: { id: req.user.id } }
-    }
+      performedBy: { connect: { id: req.user.id } },
+    },
   });
 
-  res.status(201).json(new ApiResponse(201, { followUp }, "Follow-up added successfully"));
+  res
+    .status(201)
+    .json(new ApiResponse(201, { followUp }, "Follow-up added successfully"));
 });

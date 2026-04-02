@@ -9,7 +9,6 @@ import ApiResponse from "../utils/ApiResponse.js";
 // @access  Private/Admin Only
 export const createUser = catchAsyncError(async (req, res, next) => {
   const { name, email, password, role, department } = req.body;
-  let departmentName = department[0].toUpperCase() + department.slice(1).toLowerCase(); // Normalize department name
 
   if (!name || !email || !password) {
     return next(new ErrorHandler("Please provide all required fields", 400));
@@ -19,6 +18,11 @@ export const createUser = catchAsyncError(async (req, res, next) => {
   if (userExists) {
     return next(new ErrorHandler("User already exists with this email", 400));
   }
+
+  // Normalize department name (safe — only when provided)
+  const departmentName = department
+    ? department[0].toUpperCase() + department.slice(1).toLowerCase()
+    : null;
 
   // Validate department if creating a STAFF member
   if (role !== "ADMIN") {
@@ -84,4 +88,45 @@ export const deleteUser = catchAsyncError(async (req, res, next) => {
   await prisma.user.delete({ where: { id } });
 
   res.status(200).json(new ApiResponse(200, null, "User removed successfully"));
+});
+
+// @desc    Get all users
+// @route   GET /api/users
+// @access  Private/Admin Only
+export const getUsers = catchAsyncError(async (req, res, next) => {
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      departmentId: true,
+      department: {
+        select: {
+          name: true
+        }
+      }
+    },
+    orderBy: {
+      createdAt: "desc"
+    }
+  });
+
+  // Optional: clean response format
+  const formattedUsers = users.map(user => ({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    department: user.department?.name || null,
+    departmentId: user.departmentId
+  }));
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      { users: formattedUsers },
+      "Users fetched successfully"
+    )
+  );
 });

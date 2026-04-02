@@ -94,7 +94,7 @@ model Lead {
 
   followUps      FollowUp[]
   visits         Visit[]
-
+  quotations     Quotation[]   // <-- YOU MUST ADD THIS LINE
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 }
@@ -155,4 +155,69 @@ model ActivityLog {
   user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   createdAt  DateTime @default(now())
+}
+
+
+// Enums based on your dropdown options
+enum PanelType {
+  TOPCON
+  MONOFACIAL
+}
+
+enum DcrStatus {
+  DCR
+  NON_DCR // Assuming there might be a Non-DCR option, adjust if needed
+}
+
+// Enum for the 4 identical dropdowns
+enum ComponentBrand {
+  HAVELLS_V_GUARD    @map("Havells / V Guard")
+  HAVELLS_POLYCAB    @map("Havells/Polycab")
+  V_GUARD            @map("V Guard")
+  HAVELLS            @map("Havells")
+  RR_KABLE           @map("RR KABLE")
+}
+
+model Quotation {
+  id                    String          @id @default(uuid())
+  leadId                String
+  lead                  Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  // Existing fields
+  amount                Float?          // You might want to remove this if 'quotationValue' replaces it entirely
+  description           String?
+
+  // --- New Fields from UI ---
+
+  // Panel Details
+  panelName             String?
+  panelType             PanelType?
+  panelWarrantyYears    Int?
+  panelSizeWatt         String?         // Stored as String to support ranges like "550 - 575" or "535 - 550"
+  numberOfPanels        Int?
+  
+  // System Specifications
+  loadKw                Float?
+  structure             String?
+  inverterSizeKw        Float?
+  inverterWarrantyYears Int?
+  
+  // Financial & Compliance
+  quotationValue        Float?          
+  dcrStatus             DcrStatus?      @default(DCR)
+  subsidy               Float?
+  
+  // Cabling Specifications
+  dcCableSqMm           Float?
+  acCableSqMm           Float?
+  
+  // 4 Dropdowns with shared brand options
+  acWire                ComponentBrand?
+  dcWire                ComponentBrand?
+  acdbCompany           ComponentBrand?
+  dcdbCompany           ComponentBrand?
+
+  // Timestamps
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 }

@@ -5,20 +5,14 @@ import catchAsyncError from "./catchAsyncError.js";
 
 // 🔒 1. Protect Routes (Check for valid JWT)
 export const protect = catchAsyncError(async (req, res, next) => {
-  let token;
+  const token = req.cookies.token;
 
-  // Check if token exists in the headers
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    token = req.headers.authorization.split(" ")[1];
-  }
 
   // If no token was found
   if (!token) {
     return next(new ErrorHandler("Not authorized to access this route", 401));
   }
+  
 
   try {
     // Verify the token
@@ -32,6 +26,7 @@ export const protect = catchAsyncError(async (req, res, next) => {
         name: true,
         email: true,
         role: true,
+        department: true,
         departmentId: true,
         isActive: true,
       },
@@ -42,8 +37,8 @@ export const protect = catchAsyncError(async (req, res, next) => {
       return next(
         new ErrorHandler(
           "The user belonging to this token no longer exists or is inactive.",
-          401
-        )
+          401,
+        ),
       );
     }
 
@@ -52,7 +47,9 @@ export const protect = catchAsyncError(async (req, res, next) => {
     next();
   } catch (error) {
     // This catches expired or manipulated tokens
-    return next(new ErrorHandler("Not authorized, token failed or expired", 401));
+    return next(
+      new ErrorHandler("Not authorized, token failed or expired", 401),
+    );
   }
 });
 
@@ -69,8 +66,8 @@ export const authorize = (...roles) => {
       return next(
         new ErrorHandler(
           `User role '${req.user.role}' is not allowed to access this resource`,
-          403
-        )
+          403,
+        ),
       );
     }
 
