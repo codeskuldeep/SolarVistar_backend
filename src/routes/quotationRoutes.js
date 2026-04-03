@@ -7,6 +7,7 @@ import {
   deleteQuotation,
 } from "../controllers/quotationController.js";
 import { protect } from "../middlewares/authMiddleware.js";
+import { pagination } from "../middlewares/paginationMiddleware.js";
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ const router = express.Router();
 router.use(protect);
 
 router.route("/")
-  .get(getQuotations)
+  .get(pagination(), getQuotations)
   .post(createQuotation);
 
 router.route("/:id")

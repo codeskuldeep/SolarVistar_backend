@@ -64,36 +64,50 @@ export const createLead = catchAsyncError(async (req, res, next) => {
 // @route   GET /api/leads
 // @access  Private
 export const getLeads = catchAsyncError(async (req, res, next) => {
+  const { page, limit, skip } = req.pagination;
+
   let query = {};
 
-  // If the user is STAFF, restrict the query to only leads assigned to them
+  // Role-based filtering
   if (req.user.role === "STAFF") {
     query = { assignedToId: req.user.id };
   }
 
-  const leads = await prisma.lead.findMany({
-    where: query,
-    orderBy: { createdAt: "desc" }, // Newest leads first
-    include: {
-      assignedTo: { select: { name: true, email: true } },
-      followUps: {
-        orderBy: { createdAt: "desc" },
-        take: 1, // Just grab the most recent follow-up
+  const [leads, totalLeads] = await prisma.$transaction([
+    prisma.lead.findMany({
+      where: query,
+      skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      include: {
+        assignedTo: { select: { name: true, email: true } },
+        followUps: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
       },
-    },
-  });
+    }),
+    prisma.lead.count({
+      where: query,
+    }),
+  ]);
 
-  res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { count: leads.length, leads },
-        "Leads fetched successfully",
-      ),
-    );
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        leads,
+        meta: {
+          totalItems: totalLeads,
+          currentPage: page,
+          itemsPerPage: limit,
+          totalPages: Math.ceil(totalLeads / limit),
+        },
+      },
+      "Leads fetched successfully",
+    )
+  );
 });
-
 // @desc    Update Lead Status
 // @route   PUT /api/leads/:id/status
 // @access  Private

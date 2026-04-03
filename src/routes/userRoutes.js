@@ -1,6 +1,7 @@
 import express from "express";
 import { createUser, deleteUser, getUsers } from "../controllers/userController.js";
 import { protect, authorize } from "../middlewares/authMiddleware.js";
+import { pagination } from "../middlewares/paginationMiddleware.js";
 
 const router = express.Router();
 
@@ -8,7 +9,7 @@ const router = express.Router();
 router.use(protect);
 router.use(authorize("ADMIN"));
 
-router.get("/", getUsers);
+router.get("/",pagination(), getUsers);
 router.post("/", createUser);
 router.delete("/:id", deleteUser);
 

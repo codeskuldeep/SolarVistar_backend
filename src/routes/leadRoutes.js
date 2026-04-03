@@ -6,6 +6,7 @@ import {
   addFollowUp 
 } from "../controllers/leadController.js";
 import { protect } from "../middlewares/authMiddleware.js";
+import { pagination } from "../middlewares/paginationMiddleware.js";
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ const router = express.Router();
 router.use(protect);
 
 router.post("/", createLead);
-router.get("/", getLeads);
+router.get("/", pagination(), getLeads);
 router.patch("/:id/status", updateLeadStatus);
 router.post("/:id/followups", addFollowUp);
 

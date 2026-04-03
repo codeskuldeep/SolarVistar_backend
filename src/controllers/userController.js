@@ -94,38 +94,46 @@ export const deleteUser = catchAsyncError(async (req, res, next) => {
 // @route   GET /api/users
 // @access  Private/Admin Only
 export const getUsers = catchAsyncError(async (req, res, next) => {
-  const users = await prisma.user.findMany({
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      departmentId: true,
-      department: {
-        select: {
-          name: true
-        }
-      }
-    },
-    orderBy: {
-      createdAt: "desc"
-    }
-  });
+  const { page, limit, skip } = req.pagination;
 
-  // Optional: clean response format
-  const formattedUsers = users.map(user => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    department: user.department?.name || null,
-    departmentId: user.departmentId
-  }));
+  const [users, totalUsers] = await prisma.$transaction([
+    prisma.user.findMany({
+      skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        departmentId: true,
+        department: {
+          select: { name: true },
+        },
+      },
+    }),
+    prisma.user.count(),
+  ]);
 
   res.status(200).json(
     new ApiResponse(
       200,
-      { users: formattedUsers },
+      {
+        users: users.map((user) => ({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          department: user.department?.name || null,
+          departmentId: user.departmentId,
+        })),
+        meta: {
+          totalItems: totalUsers,
+          currentPage: page,
+          itemsPerPage: limit,
+          totalPages: Math.ceil(totalUsers / limit),
+        },
+      },
       "Users fetched successfully"
     )
   );

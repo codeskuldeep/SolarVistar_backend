@@ -5,6 +5,7 @@ import {
   updateVisitStatus 
 } from "../controllers/visitController.js";
 import { protect } from "../middlewares/authMiddleware.js";
+import { pagination } from "../middlewares/paginationMiddleware.js";
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ const router = express.Router();
 router.use(protect);
 
 router.post("/", createVisit);
-router.get("/", getVisits);
+router.get("/", pagination(), getVisits);
 router.patch("/:id/status", updateVisitStatus);
 
 export default router;

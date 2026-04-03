@@ -35,28 +35,43 @@ export const createQuotation = catchAsyncError(async (req, res, next) => {
 // @route   GET /api/quotations
 // @access  Private 
 export const getQuotations = catchAsyncError(async (req, res, next) => {
-  const { leadId } = req.query; // Allows fetching quotations for a specific lead via ?leadId=...
+  const { page, limit, skip } = req.pagination;
+  const { leadId } = req.query;
 
-  const queryOptions = {
-    orderBy: { createdAt: "desc" },
-    include: {
-      lead: {
-        select: { customerName: true, phoneNumber: true },
+  // Build query cleanly (immutable)
+  const where = leadId ? { leadId } : undefined;
+
+  const [quotations, totalQuotations] = await prisma.$transaction([
+    prisma.quotation.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      include: {
+        lead: {
+          select: { customerName: true, phoneNumber: true },
+        },
       },
-    },
-  };
-
-  if (leadId) {
-    queryOptions.where = { leadId };
-  }
-
-  const quotations = await prisma.quotation.findMany(queryOptions);
+    }),
+    prisma.quotation.count({ where }),
+  ]);
 
   res.status(200).json(
-    new ApiResponse(200, { quotations }, "Quotations fetched successfully")
+    new ApiResponse(
+      200,
+      {
+        quotations,
+        meta: {
+          totalItems: totalQuotations,
+          currentPage: page,
+          itemsPerPage: limit,
+          totalPages: Math.ceil(totalQuotations / limit),
+        },
+      },
+      "Quotations fetched successfully"
+    )
   );
 });
-
 // @desc    Get a single quotation by ID
 // @route   GET /api/quotations/:id
 // @access  Private 
