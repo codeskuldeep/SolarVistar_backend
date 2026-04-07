@@ -73,7 +73,7 @@ export const getVisits = catchAsyncError(async (req, res, next) => {
       take: limit,
       orderBy: { visitDatetime: "asc" }, // upcoming first
       include: {
-        assignedStaff: { select: { name: true } },
+        assignedStaff: { select: { name: true, department: { select: { name: true } } } },
         lead: { select: { id: true, status: true } },
       },
     }),

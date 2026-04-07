@@ -12,7 +12,7 @@ export const protect = catchAsyncError(async (req, res, next) => {
   if (!token) {
     return next(new ErrorHandler("Not authorized to access this route", 401));
   }
-  
+
 
   try {
     // Verify the token

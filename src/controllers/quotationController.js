@@ -22,7 +22,12 @@ export const createQuotation = catchAsyncError(async (req, res, next) => {
   const quotation = await prisma.quotation.create({
     data: {
       leadId,
-      ...quotationData, // Spreads all the optional fields (panelName, quotationValue, etc.)
+      ...quotationData,
+    },
+    include: {
+      lead: {
+        select: { customerName: true, phoneNumber: true },
+      },
     },
   });
 
@@ -117,6 +122,11 @@ export const updateQuotation = catchAsyncError(async (req, res, next) => {
   quotation = await prisma.quotation.update({
     where: { id },
     data: updateData,
+    include: {
+      lead: {
+        select: { customerName: true, phoneNumber: true },
+      },
+    },
   });
 
   res.status(200).json(

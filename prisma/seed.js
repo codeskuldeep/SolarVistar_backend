@@ -19,7 +19,7 @@ async function main() {
   console.log('✅ Departments seeded successfully.');
 
   // 2. Create Master Admin Account
-  const adminEmail = 'admin@solarvistar.com';
+  const adminEmail = 'admin@zorvyn.com';
   const adminPassword = 'AdminPassword123!'; // You can change this
 
   const existingAdmin = await prisma.user.findUnique({

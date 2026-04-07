@@ -63,38 +63,44 @@ export const createLead = catchAsyncError(async (req, res, next) => {
 // @desc    Get leads (Admins see all, Staff see their assigned leads)
 // @route   GET /api/leads
 // @access  Private
+// controllers/leadController.js
+
 export const getLeads = catchAsyncError(async (req, res, next) => {
-  const { page, limit, skip } = req.pagination;
+  const {page, limit, skip} = req.pagination; // Extract pagination info from the middleware
+  
+  // 🔥 Catch the status filter from the URL
+  const { status } = req.query; 
 
-  let query = {};
-
-  // Role-based filtering
-  if (req.user.role === "STAFF") {
-    query = { assignedToId: req.user.id };
+  // Build a dynamic query object
+  // Build a dynamic query object
+  const whereClause = {};
+  
+  if (status) {
+    whereClause.status = status;
+  } else {
+    // 🔥 THE FIX: Use an OR array to include leads that are not converted, 
+    // AND older leads that might still have a null status!
+    whereClause.OR = [
+      { status: { not: 'CONVERTED' } },
+    ];
   }
 
   const [leads, totalLeads] = await prisma.$transaction([
     prisma.lead.findMany({
-      where: query,
+      where: whereClause, // 👈 Apply the filter here
       skip,
       take: limit,
-      orderBy: { createdAt: "desc" },
-      include: {
-        assignedTo: { select: { name: true, email: true } },
-        followUps: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
-      },
+      orderBy: { updatedAt: "desc" }, // Sort by recently updated/converted
+      include: { 
+        assignedTo: { select: { name: true, department: true } }, 
+      }
     }),
-    prisma.lead.count({
-      where: query,
-    }),
+    prisma.lead.count({ where: whereClause }),
   ]);
 
   res.status(200).json(
     new ApiResponse(
-      200,
+      200, 
       {
         leads,
         meta: {
@@ -102,9 +108,9 @@ export const getLeads = catchAsyncError(async (req, res, next) => {
           currentPage: page,
           itemsPerPage: limit,
           totalPages: Math.ceil(totalLeads / limit),
-        },
-      },
-      "Leads fetched successfully",
+        }
+      }, 
+      "Leads fetched successfully"
     )
   );
 });

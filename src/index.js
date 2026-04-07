@@ -42,7 +42,7 @@ app.use('/api/quotations', quotationRoutes);
 
 // Health Check
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'Solar Vistar CRM API is running' });
+  res.status(200).json({ status: 'OK', message: 'Zorvyn CRM API is running' });
 });
 
 // 🚨 4. THE GLOBAL ERROR HANDLER MUST GO HERE 🚨
