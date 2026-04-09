@@ -19,7 +19,10 @@ export const loginUser = catchAsyncError(async (req, res, next) => {
     return next(new ErrorHandler("Please provide email and password", 400));
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ 
+    where: { email },
+    include: { department: true } 
+  });
 
   if (!user || !user.isActive) {
     return next(
@@ -56,6 +59,7 @@ export const loginUser = catchAsyncError(async (req, res, next) => {
             name: user.name,
             email: user.email,
             role: user.role,
+            department: user.department,
             departmentId: user.departmentId,
           },
         },

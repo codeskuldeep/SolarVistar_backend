@@ -61,10 +61,26 @@ export const createVisit = catchAsyncError(async (req, res, next) => {
 // @access  Private
 export const getVisits = catchAsyncError(async (req, res, next) => {
   const { page, limit, skip } = req.pagination;
+  const { search } = req.query;
 
-  // Role-based filtering (immutable)
-  const where =
-    req.user.role === "STAFF" ? { assignedStaffId: req.user.id } : undefined;
+  // Role-based filtering: Sales and Admins see all, other staff see only their assigned visits
+  const restricted = req.user.role === "STAFF" && req.user.department?.name !== "Sales";
+  const where = {};
+
+  if (restricted) {
+    where.assignedStaffId = req.user.id;
+  }
+
+  // 🔍 Server-side search filter
+  if (search) {
+    where.AND = [{
+      OR: [
+        { customerName: { contains: search, mode: 'insensitive' } },
+        { phoneNumber: { contains: search } },
+        { address: { contains: search, mode: 'insensitive' } },
+      ],
+    }];
+  }
 
   const [visits, totalVisits] = await prisma.$transaction([
     prisma.visit.findMany({
@@ -121,19 +137,20 @@ export const updateVisitStatus = catchAsyncError(async (req, res, next) => {
     return next(new ErrorHandler("Visit not found", 404));
   }
 
-  // Security Check 1: Staff can only update their own visits
+  // Security Check 1: Staff can only update their own visits (Sales bypasses this)
   if (
     req.user.role === "STAFF" &&
-    existingVisit.assignedStaffId !== req.user.id
+    existingVisit.assignedStaffId !== req.user.id &&
+    req.user.department?.name !== "Sales"
   ) {
     return next(new ErrorHandler("Not authorized to update this visit", 403));
   }
 
   // 🚨 Security Check 2: REASSIGNMENT GUARD
-  // If the request contains a new staff ID, verify the user is an Admin
-  if (assignedStaffId && req.user.role !== "ADMIN") {
+  // If the request contains a new staff ID, verify the user is an Admin or Sales
+  if (assignedStaffId && req.user.role !== "ADMIN" && req.user.department?.name !== "Sales") {
     return next(
-      new ErrorHandler("Only Admins are permitted to reassign visits", 403),
+      new ErrorHandler("Only Admins or Sales are permitted to reassign visits", 403),
     );
   }
 

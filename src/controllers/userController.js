@@ -94,10 +94,24 @@ export const deleteUser = catchAsyncError(async (req, res, next) => {
 // @route   GET /api/users
 // @access  Private/Admin Only
 export const getUsers = catchAsyncError(async (req, res, next) => {
+  if (req.user.role !== "ADMIN" && req.user.department?.name !== "Sales") {
+    return next(new ErrorHandler("Not authorized to fetch users", 403));
+  }
+
   const { page, limit, skip } = req.pagination;
+  const { search } = req.query;
+
+  // 🔍 Server-side search filter
+  const where = search ? {
+    OR: [
+      { name: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+    ],
+  } : undefined;
 
   const [users, totalUsers] = await prisma.$transaction([
     prisma.user.findMany({
+      where,
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -112,7 +126,7 @@ export const getUsers = catchAsyncError(async (req, res, next) => {
         },
       },
     }),
-    prisma.user.count(),
+    prisma.user.count({ where }),
   ]);
 
   res.status(200).json(

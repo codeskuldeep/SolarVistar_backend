@@ -7,10 +7,9 @@ const router = express.Router();
 
 // 🔒 Apply middleware to ALL routes in this file
 router.use(protect);
-router.use(authorize("ADMIN"));
 
-router.get("/",pagination(), getUsers);
-router.post("/", createUser);
-router.delete("/:id", deleteUser);
+router.get("/", pagination(), getUsers);
+router.post("/", authorize("ADMIN"), createUser);
+router.delete("/:id", authorize("ADMIN"), deleteUser);
 
 export default router;

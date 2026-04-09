@@ -41,10 +41,22 @@ export const createQuotation = catchAsyncError(async (req, res, next) => {
 // @access  Private 
 export const getQuotations = catchAsyncError(async (req, res, next) => {
   const { page, limit, skip } = req.pagination;
-  const { leadId } = req.query;
+  const { leadId, search } = req.query;
 
-  // Build query cleanly (immutable)
-  const where = leadId ? { leadId } : undefined;
+  // 🔍 Server-side search filter (searches through related lead)
+  let where;
+  if (search) {
+    where = {
+      lead: {
+        OR: [
+          { customerName: { contains: search, mode: 'insensitive' } },
+          { phoneNumber: { contains: search } },
+        ],
+      },
+    };
+  } else if (leadId) {
+    where = { leadId };
+  }
 
   const [quotations, totalQuotations] = await prisma.$transaction([
     prisma.quotation.findMany({

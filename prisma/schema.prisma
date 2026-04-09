@@ -73,6 +73,8 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([name])
 }
 
 model Lead {
@@ -97,6 +99,9 @@ model Lead {
   quotations     Quotation[]   // <-- YOU MUST ADD THIS LINE
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
+
+  @@index([customerName])
+  @@index([phoneNumber])
 }
 
 model FollowUp {
@@ -142,6 +147,9 @@ model Visit {
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+
+  @@index([customerName])
+  @@index([phoneNumber])
 }
 
 model ActivityLog {

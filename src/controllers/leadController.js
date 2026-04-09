@@ -17,22 +17,25 @@ export const createLead = catchAsyncError(async (req, res, next) => {
     assignedToId,
   } = req.body;
 
-  const user = await prisma.user.findUnique({
-    where: { id: assignedToId },
-    include: { department: true },
-  });
-
-  const isFromSales = user?.department?.name === "Sales";
   // 1. Basic Validation
   if (!customerName || !phoneNumber) {
     return next(
       new ErrorHandler("Customer Name and Phone Number are required", 400),
     );
   }
-  if (!isFromSales)
-    return next(
-      new ErrorHandler("Assigned user must be from the Sales department", 400),
-    );
+
+  // If assigning, ensure the assignee is from Sales
+  if (assignedToId) {
+    const user = await prisma.user.findUnique({
+      where: { id: assignedToId },
+      include: { department: true },
+    });
+    if (user?.department?.name !== "Sales") {
+      return next(
+        new ErrorHandler("Assigned user must be from the Sales department", 400),
+      );
+    }
+  }
   // 2. Create the Lead
   const lead = await prisma.lead.create({
     data: {
@@ -68,21 +71,33 @@ export const createLead = catchAsyncError(async (req, res, next) => {
 export const getLeads = catchAsyncError(async (req, res, next) => {
   const {page, limit, skip} = req.pagination; // Extract pagination info from the middleware
   
-  // 🔥 Catch the status filter from the URL
-  const { status } = req.query; 
+  // 🔥 Catch the status and search filters from the URL
+  const { status, search } = req.query; 
 
-  // Build a dynamic query object
   // Build a dynamic query object
   const whereClause = {};
   
   if (status) {
     whereClause.status = status;
   } else {
-    // 🔥 THE FIX: Use an OR array to include leads that are not converted, 
-    // AND older leads that might still have a null status!
     whereClause.OR = [
       { status: { not: 'CONVERTED' } },
     ];
+  }
+
+  // 🔍 Server-side search filter
+  if (search) {
+    whereClause.AND = [{
+      OR: [
+        { customerName: { contains: search, mode: 'insensitive' } },
+        { phoneNumber: { contains: search } },
+      ],
+    }];
+  }
+
+  // 🚨 Access Control: Non-sales STAFF only see their assigned leads
+  if (req.user.role === "STAFF" && req.user.department?.name !== "Sales") {
+    whereClause.assignedToId = req.user.id;
   }
 
   const [leads, totalLeads] = await prisma.$transaction([
@@ -127,33 +142,38 @@ export const updateLeadStatus = catchAsyncError(async (req, res, next) => {
     assignedToId, // 👈 1. Accept the new assignee ID
   } = req.body;
 
-  const user = await prisma.user.findUnique({
-    where: { id: assignedToId },
-    include: { department: true },
-  });
-
-  const isFromSales = user?.department?.name === "Sales";
-
   const existingLead = await prisma.lead.findUnique({ where: { id } });
 
   if (!existingLead) {
     return next(new ErrorHandler("Lead not found", 404));
   }
 
-  if (!isFromSales)
-    return next(
-      new ErrorHandler("Assigned user must be from the Sales department", 400),
-    );
+  // If reassigned, ensure new staff is from Sales
+  if (assignedToId) {
+    const user = await prisma.user.findUnique({
+      where: { id: assignedToId },
+      include: { department: true },
+    });
+    if (user?.department?.name !== "Sales") {
+      return next(
+        new ErrorHandler("Assigned user must be from the Sales department", 400),
+      );
+    }
+  }
 
-  // Security Check 1: Staff can only update their own leads
-  if (req.user.role === "STAFF" && existingLead.assignedToId !== req.user.id) {
+  // Security Check 1: Staff can only update their own leads (Sales bypasses this)
+  if (
+    req.user.role === "STAFF" && 
+    existingLead.assignedToId !== req.user.id &&
+    req.user.department?.name !== "Sales"
+  ) {
     return next(new ErrorHandler("Not authorized to update this lead", 403));
   }
 
   // 🚨 Security Check 2: REASSIGNMENT GUARD
-  if (assignedToId && req.user.role !== "ADMIN") {
+  if (assignedToId && req.user.role !== "ADMIN" && req.user.department?.name !== "Sales") {
     return next(
-      new ErrorHandler("Only Admins are permitted to reassign leads", 403),
+      new ErrorHandler("Only Admins or Sales are permitted to reassign leads", 403),
     );
   }
 
