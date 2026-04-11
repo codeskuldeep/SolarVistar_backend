@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs"; // Make sure to use bcryptjs to match your install
+import bcrypt from "bcryptjs";
 import prisma from "../config/db.js";
 import catchAsyncError from "../middlewares/catchAsyncError.js";
 import ErrorHandler from "../utils/ErrorHandler.js";
@@ -25,9 +25,7 @@ export const loginUser = catchAsyncError(async (req, res, next) => {
   });
 
   if (!user || !user.isActive) {
-    return next(
-      new ErrorHandler("Invalid credentials or inactive account", 401),
-    );
+    return next(new ErrorHandler("Invalid credentials or inactive account", 401));
   }
 
   const isMatch = await bcrypt.compare(password, user.passwordHash);
@@ -35,60 +33,42 @@ export const loginUser = catchAsyncError(async (req, res, next) => {
     return next(new ErrorHandler("Invalid email or password", 401));
   }
 
-  // 1. Generate the token FIRST
+  // 1. Generate the token
   const token = generateToken(user.id, user.role, user.departmentId);
 
-  // 2. Create cookie options
-  const cookieOptions = {
-    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-    httpOnly: true, // 🔒 JavaScript cannot read this!
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-  };
-
-  // 3. Attach the cookie and send ONLY the user data in the JSON
-  res
-    .status(200)
-    .cookie("token", token, cookieOptions)
-    .json(
-      new ApiResponse(
-        200,
-        {
-          user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            department: user.department,
-            departmentId: user.departmentId,
-          },
+  // 2. Send token and user data in the JSON response (NO COOKIES)
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        token, // Added token to the payload
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          department: user.department,
+          departmentId: user.departmentId,
         },
-        "Login successful",
-      ),
-    );
+      },
+      "Login successful"
+    )
+  );
 });
 
-
-// @desc    Get current logged in user (Check Auth)
-// @route   GET /api/auth/me
-// @access  Private
+// --- GET ME ---
 export const getMe = catchAsyncError(async (req, res, next) => {
-  // Because this route will be protected by your `protect` middleware,
-  // req.user is already securely fetched from the DB!
+  // req.user will be populated by your updated middleware
   res.status(200).json(
     new ApiResponse(200, { user: req.user }, "User profile fetched successfully")
   );
 });
 
-// @desc    Log user out / clear cookie
-// @route   POST /api/auth/logout
-// @access  Public
+// --- LOGOUT ---
 export const logoutUser = catchAsyncError(async (req, res, next) => {
-  // Overwrite the cookie with a blank one that expires in 10 seconds
-  res.status(200).cookie('token', 'none', {
-    expires: new Date(Date.now() + 10 * 1000),
-    httpOnly: true,
-  }).json(
+  // The server has no cookies to clear anymore. 
+  // We just return a success response.
+  res.status(200).json(
     new ApiResponse(200, null, "Logged out successfully")
   );
 });
