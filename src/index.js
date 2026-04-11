@@ -10,6 +10,7 @@ import userRoutes from "./routes/userRoutes.js";
 import leadRoutes from "./routes/leadRoutes.js";
 import visitRoutes from "./routes/visitRoutes.js";
 import quotationRoutes from "./routes/quotationRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
 
 // 2. Import your new Error Middleware
 import { errorMiddleware } from "./middlewares/errorMiddleware.js";
@@ -40,6 +41,7 @@ app.use("/api/users", userRoutes);
 
 app.use("/api/visits", visitRoutes);
 app.use("/api/quotations", quotationRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // Health Check
 app.get("/health", (req, res) => {
