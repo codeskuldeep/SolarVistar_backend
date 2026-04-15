@@ -129,6 +129,26 @@ export const getLeads = catchAsyncError(async (req, res, next) => {
     )
   );
 });
+
+
+
+export const getLeadById = catchAsyncError(async (req, res, next) => {
+  const {id} = req.params;
+
+  const lead = await prisma.lead.findUnique({
+    where: {id},
+    include: {
+      assignedTo: { select: { name: true, department: true } },
+  }  });
+
+  if (!lead) {
+    return next(new ErrorHandler("Lead not found", 404));
+  }
+  res.status(200).json(new ApiResponse(200, { lead: lead }, "Lead fetched successfully"));
+});
+
+
+
 // @desc    Update Lead Status
 // @route   PUT /api/leads/:id/status
 // @access  Private

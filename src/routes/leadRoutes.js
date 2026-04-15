@@ -3,7 +3,8 @@ import {
   createLead, 
   getLeads, 
   updateLeadStatus, 
-  addFollowUp 
+  addFollowUp, 
+  getLeadById
 } from "../controllers/leadController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import { pagination } from "../middlewares/paginationMiddleware.js";
@@ -15,6 +16,7 @@ router.use(protect);
 
 router.post("/", createLead);
 router.get("/", pagination(), getLeads);
+router.get("/:id", getLeadById);
 router.patch("/:id/status", updateLeadStatus);
 router.post("/:id/followups", addFollowUp);
 

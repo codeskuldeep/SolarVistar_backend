@@ -63,6 +63,8 @@ model User {
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id])
 
+  uploadedDocuments Document[] @relation("StaffDocuments")
+
   // Relations (Disambiguated for when a user creates vs is assigned)
   createdLeads       Lead[]        @relation("LeadCreator")
   assignedLeads      Lead[]        @relation("LeadAssignee")
@@ -91,6 +93,8 @@ model Lead {
   assignedToId   String?
   assignedTo     User?      @relation("LeadAssignee", fields: [assignedToId], references: [id])
   
+  documents Document[] @relation("LeadDocuments")
+
   createdById    String?
   createdBy      User?      @relation("LeadCreator", fields: [createdById], references: [id])
 
@@ -228,4 +232,36 @@ model Quotation {
   // Timestamps
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
+}
+
+
+model Document {
+  id          String   @id @default(uuid())
+  
+  // Cloudinary Data
+  url         String
+  publicId    String   @unique
+  format      String   // e.g., 'pdf', 'png'
+  bytes       Int      // Size in bytes
+  
+  // Organization
+  category    String   // e.g., 'INVOICE', 'SITE_MAP', 'ID_PROOF'
+  
+  // Who uploaded this? (Staff / Admin)
+  uploadedById String
+  uploadedBy   User     @relation("StaffDocuments", fields: [uploadedById], references: [id])
+
+  // --- CRM Relations (Optional attachments) ---
+  
+  leadId      String?
+  lead        Lead?    @relation("LeadDocuments", fields: [leadId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Indexes for hyper-fast lookups
+  @@index([category])
+  @@index([uploadedById])
+  @@index([leadId])
 }
