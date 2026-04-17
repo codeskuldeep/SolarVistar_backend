@@ -1,7 +1,8 @@
 // src/index.js
+import "./config/env.js";
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
+
 import cookieParser from "cookie-parser";
 
 // 1. Import Routes
@@ -15,7 +16,6 @@ import documentRoutes from "./routes/documentRoutes.js"; // New Document Routes
 // 2. Import your new Error Middleware
 import { errorMiddleware } from "./middlewares/errorMiddleware.js";
 
-dotenv.config();
 const app = express();
 
 app.use(
