@@ -12,7 +12,7 @@ import { streamUploadToCloudinary, deleteFromCloudinary } from "../utils/cloudin
  */
 export const uploadDocumentService = async (req, uploadedById) => {
   // 1. Extract metadata from Query Params (Bulletproof against multipart race conditions)
-  const { category, leadId } = req.query;
+  const { category, leadId, visitId } = req.query;
 
   if (!category) {
     throw new ErrorHandler("Document 'category' is required in query parameters.", 400);
@@ -22,6 +22,12 @@ export const uploadDocumentService = async (req, uploadedById) => {
   if (leadId) {
     const leadExists = await prisma.lead.findUnique({ where: { id: leadId } });
     if (!leadExists) throw new ErrorHandler("Lead not found.", 404);
+  }
+
+  // Optional: Verify the Visit exists
+  if (visitId) {
+    const visitExists = await prisma.visit.findUnique({ where: { id: visitId } });
+    if (!visitExists) throw new ErrorHandler("Visit not found.", 404);
   }
 
   // 2. Intercept the live stream
@@ -42,7 +48,8 @@ export const uploadDocumentService = async (req, uploadedById) => {
       bytes: cloudData.bytes,
       category: category.toUpperCase(),
       uploadedById,
-      leadId: leadId || null, // Links to Lead if provided
+      leadId: leadId || null,   // Links to Lead if provided
+      visitId: visitId || null, // Links to Visit if provided
     },
   });
 
@@ -84,6 +91,24 @@ export const getLeadDocumentsService = async (leadId) => {
         select: { name: true, role: true } 
       }
     }
+  });
+
+  return documents;
+};
+
+/**
+ * Fetches all documents (photos) for a specific visit.
+ * @param {string} visitId
+ */
+export const getVisitDocumentsService = async (visitId) => {
+  const documents = await prisma.document.findMany({
+    where: { visitId },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      uploadedBy: {
+        select: { name: true, role: true },
+      },
+    },
   });
 
   return documents;

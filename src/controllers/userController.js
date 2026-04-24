@@ -10,8 +10,29 @@ import ApiResponse from "../utils/ApiResponse.js";
 export const createUser = catchAsyncError(async (req, res, next) => {
   const { name, email, password, role, department } = req.body;
 
+  // ── Required fields ──
   if (!name || !email || !password) {
-    return next(new ErrorHandler("Please provide all required fields", 400));
+    return next(new ErrorHandler("Name, email, and password are required", 400));
+  }
+
+  // ── Name length ──
+  const trimmedName = name.trim();
+  if (trimmedName.length < 2) {
+    return next(new ErrorHandler("Name must be at least 2 characters", 400));
+  }
+
+  // ── Email format ──
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email.trim())) {
+    return next(new ErrorHandler("Please provide a valid email address", 400));
+  }
+
+  // ── Password strength ──
+  if (password.length < 8) {
+    return next(new ErrorHandler("Password must be at least 8 characters", 400));
+  }
+  if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+    return next(new ErrorHandler("Password must contain at least one letter and one number", 400));
   }
 
   const userExists = await prisma.user.findUnique({ where: { email } });
@@ -94,7 +115,7 @@ export const deleteUser = catchAsyncError(async (req, res, next) => {
 // @route   GET /api/users
 // @access  Private/Admin Only
 export const getUsers = catchAsyncError(async (req, res, next) => {
-  if (req.user.role !== "ADMIN" && req.user.department?.name !== "Sales") {
+  if (req.user.role !== "ADMIN" && req.user.department?.name !== "Sales Department") {
     return next(new ErrorHandler("Not authorized to fetch users", 403));
   }
 

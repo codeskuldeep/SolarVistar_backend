@@ -30,7 +30,7 @@ export const createLead = catchAsyncError(async (req, res, next) => {
       where: { id: assignedToId },
       include: { department: true },
     });
-    if (user?.department?.name !== "Sales") {
+    if (user?.department?.name !== "Sales Department") {
       return next(
         new ErrorHandler("Assigned user must be from the Sales department", 400),
       );
@@ -96,7 +96,7 @@ export const getLeads = catchAsyncError(async (req, res, next) => {
   }
 
   // 🚨 Access Control: Non-sales STAFF only see their assigned leads
-  if (req.user.role === "STAFF" && req.user.department?.name !== "Sales") {
+  if (req.user.role === "STAFF" && req.user.department?.name !== "Sales Department") {
     whereClause.assignedToId = req.user.id;
   }
 
@@ -108,6 +108,7 @@ export const getLeads = catchAsyncError(async (req, res, next) => {
       orderBy: { updatedAt: "desc" }, // Sort by recently updated/converted
       include: { 
         assignedTo: { select: { name: true, department: true } }, 
+        followUps: { orderBy: { createdAt: "desc" }, take: 1 }
       }
     }),
     prisma.lead.count({ where: whereClause }),
@@ -139,7 +140,8 @@ export const getLeadById = catchAsyncError(async (req, res, next) => {
     where: {id},
     include: {
       assignedTo: { select: { name: true, department: true } },
-  }  });
+      followUps: { orderBy: { createdAt: "desc" } }
+    }  });
 
   if (!lead) {
     return next(new ErrorHandler("Lead not found", 404));
@@ -174,7 +176,7 @@ export const updateLeadStatus = catchAsyncError(async (req, res, next) => {
       where: { id: assignedToId },
       include: { department: true },
     });
-    if (user?.department?.name !== "Sales") {
+    if (user?.department?.name !== "Sales Department") {
       return next(
         new ErrorHandler("Assigned user must be from the Sales department", 400),
       );
@@ -185,13 +187,13 @@ export const updateLeadStatus = catchAsyncError(async (req, res, next) => {
   if (
     req.user.role === "STAFF" && 
     existingLead.assignedToId !== req.user.id &&
-    req.user.department?.name !== "Sales"
+    req.user.department?.name !== "Sales Department"
   ) {
     return next(new ErrorHandler("Not authorized to update this lead", 403));
   }
 
   // 🚨 Security Check 2: REASSIGNMENT GUARD
-  if (assignedToId && req.user.role !== "ADMIN" && req.user.department?.name !== "Sales") {
+  if (assignedToId && req.user.role !== "ADMIN" && req.user.department?.name !== "Sales Department") {
     return next(
       new ErrorHandler("Only Admins or Sales are permitted to reassign leads", 403),
     );

@@ -4,6 +4,7 @@ import {
   uploadDocumentService,
   deleteDocumentService,
   getLeadDocumentsService,
+  getVisitDocumentsService,
 } from "../services/documentService.js";
 
 // @desc    Upload a new document (Streamed)
@@ -41,5 +42,18 @@ export const getLeadDocuments = catchAsyncError(async (req, res, next) => {
 
   res.status(200).json(
     new ApiResponse(200, { documents }, "Documents fetched successfully")
+  );
+});
+
+// @desc    Get all documents (photos) for a specific visit
+// @route   GET /api/documents/visit/:visitId
+// @access  Private (Staff/Admin)
+export const getVisitDocuments = catchAsyncError(async (req, res, next) => {
+  const { visitId } = req.params;
+
+  const documents = await getVisitDocumentsService(visitId);
+
+  res.status(200).json(
+    new ApiResponse(200, { documents }, "Visit documents fetched successfully")
   );
 });

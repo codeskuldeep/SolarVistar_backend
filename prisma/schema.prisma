@@ -146,6 +146,9 @@ model Visit {
   issuesIdentified  String?
   nextSteps         String?
 
+  // Site photos (uploaded via the photo modal)
+  documents         Document[]  @relation("VisitDocuments")
+
   createdById     String?
   createdBy       User?       @relation("VisitCreator", fields: [createdById], references: [id])
 
@@ -256,6 +259,9 @@ model Document {
   leadId      String?
   lead        Lead?    @relation("LeadDocuments", fields: [leadId], references: [id], onDelete: Cascade)
 
+  visitId     String?
+  visit       Visit?   @relation("VisitDocuments", fields: [visitId], references: [id], onDelete: Cascade)
+
   // Timestamps
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -264,4 +270,5 @@ model Document {
   @@index([category])
   @@index([uploadedById])
   @@index([leadId])
+  @@index([visitId])
 }

@@ -61,14 +61,18 @@ export const createVisit = catchAsyncError(async (req, res, next) => {
 // @access  Private
 export const getVisits = catchAsyncError(async (req, res, next) => {
   const { page, limit, skip } = req.pagination;
-  const { search } = req.query;
+  const { search, leadId } = req.query;
 
   // Role-based filtering: Sales and Admins see all, other staff see only their assigned visits
-  const restricted = req.user.role === "STAFF" && req.user.department?.name !== "Sales";
+  const restricted = req.user.role === "STAFF" && req.user.department?.name !== "Sales Department";
   const where = {};
 
   if (restricted) {
     where.assignedStaffId = req.user.id;
+  }
+
+  if (leadId) {
+    where.leadId = leadId;
   }
 
   // 🔍 Server-side search filter
@@ -141,14 +145,14 @@ export const updateVisitStatus = catchAsyncError(async (req, res, next) => {
   if (
     req.user.role === "STAFF" &&
     existingVisit.assignedStaffId !== req.user.id &&
-    req.user.department?.name !== "Sales"
+    req.user.department?.name !== "Sales Department"
   ) {
     return next(new ErrorHandler("Not authorized to update this visit", 403));
   }
 
   // 🚨 Security Check 2: REASSIGNMENT GUARD
   // If the request contains a new staff ID, verify the user is an Admin or Sales
-  if (assignedStaffId && req.user.role !== "ADMIN" && req.user.department?.name !== "Sales") {
+  if (assignedStaffId && req.user.role !== "ADMIN" && req.user.department?.name !== "Sales Department") {
     return next(
       new ErrorHandler("Only Admins or Sales are permitted to reassign visits", 403),
     );

@@ -7,7 +7,7 @@ async function main() {
   console.log('🌱 Starting database seeding...');
 
   // 1. Create Core Departments
-  const departments = ['Sales', 'Installation', 'Maintenance', 'Support'];
+  const departments = ['Sales Department', 'Installation & Maintenance Department', 'Operations Department'];
   
   for (const deptName of departments) {
     await prisma.department.upsert({

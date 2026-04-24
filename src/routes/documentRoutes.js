@@ -3,6 +3,7 @@ import {
   uploadDocument,
   deleteDocument,
   getLeadDocuments,
+  getVisitDocuments,
 } from "../controllers/documentController.js";
 import { validateUploadHeaders } from "../middlewares/validateUploadHeaders.js";
 
@@ -20,6 +21,9 @@ router.post("/", validateUploadHeaders, uploadDocument);
 
 // GET /api/documents/lead/:leadId
 router.get("/lead/:leadId", getLeadDocuments);
+
+// GET /api/documents/visit/:visitId
+router.get("/visit/:visitId", getVisitDocuments);
 
 // DELETE /api/documents/:id
 router.delete("/:id", deleteDocument);

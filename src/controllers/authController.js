@@ -19,6 +19,15 @@ export const loginUser = catchAsyncError(async (req, res, next) => {
     return next(new ErrorHandler("Please provide email and password", 400));
   }
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return next(new ErrorHandler("Please provide a valid email address", 400));
+  }
+
+  if (password.length < 6) {
+    return next(new ErrorHandler("Password must be at least 6 characters", 400));
+  }
+
   const user = await prisma.user.findUnique({ 
     where: { email },
     include: { department: true } 
