@@ -17,7 +17,10 @@ import documentRoutes from "./routes/documentRoutes.js"; // New Document Routes
 import { errorMiddleware } from "./middlewares/errorMiddleware.js";
 
 const app = express();
-const allowedOrigins = process.env.ALLOWED_ORIGINS|| ["http://localhost:5173"]; // Update this to match your Vite frontend's URL
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : ["http://localhost:5173"];
+  
 app.use(
   cors({
     origin: allowedOrigins,
