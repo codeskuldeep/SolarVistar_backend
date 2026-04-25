@@ -146,6 +146,9 @@ model Visit {
   issuesIdentified  String?
   nextSteps         String?
 
+  // Geotagged site location — set once when first photo is uploaded, human-readable address
+  siteLocation      String?
+
   // Site photos (uploaded via the photo modal)
   documents         Document[]  @relation("VisitDocuments")
 

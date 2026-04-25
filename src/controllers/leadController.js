@@ -24,15 +24,18 @@ export const createLead = catchAsyncError(async (req, res, next) => {
     );
   }
 
-  // If assigning, ensure the assignee is from Sales
+  // If assigning, ensure the assignee is from Sales or is an Admin
   if (assignedToId) {
-    const user = await prisma.user.findUnique({
+    const assignee = await prisma.user.findUnique({
       where: { id: assignedToId },
-      include: { department: true },
+      include: { department: { select: { name: true } } },
     });
-    if (user?.department?.name !== "Sales Department") {
+    if (!assignee) {
+      return next(new ErrorHandler("Assigned user not found", 404));
+    }
+    if (assignee.role !== "ADMIN" && assignee.department?.name?.toLowerCase() !== "sales department") {
       return next(
-        new ErrorHandler("Assigned user must be from the Sales department", 400),
+        new ErrorHandler("Assigned user must be from the Sales department or be an Admin", 400),
       );
     }
   }
@@ -170,19 +173,6 @@ export const updateLeadStatus = catchAsyncError(async (req, res, next) => {
     return next(new ErrorHandler("Lead not found", 404));
   }
 
-  // If reassigned, ensure new staff is from Sales
-  if (assignedToId) {
-    const user = await prisma.user.findUnique({
-      where: { id: assignedToId },
-      include: { department: true },
-    });
-    if (user?.department?.name !== "Sales Department") {
-      return next(
-        new ErrorHandler("Assigned user must be from the Sales department", 400),
-      );
-    }
-  }
-
   // Security Check 1: Staff can only update their own leads (Sales bypasses this)
   if (
     req.user.role === "STAFF" && 
@@ -192,19 +182,40 @@ export const updateLeadStatus = catchAsyncError(async (req, res, next) => {
     return next(new ErrorHandler("Not authorized to update this lead", 403));
   }
 
-  // 🚨 Security Check 2: REASSIGNMENT GUARD
-  if (assignedToId && req.user.role !== "ADMIN" && req.user.department?.name !== "Sales Department") {
-    return next(
-      new ErrorHandler("Only Admins or Sales are permitted to reassign leads", 403),
-    );
+  // Build update payload — start with just the status
+  const updateData = { status };
+
+  // Only process reassignment if a NEW assignee is provided AND it's different from the current one
+  const isReassigning = assignedToId && assignedToId !== existingLead.assignedToId;
+
+  if (isReassigning) {
+    // Security Check 2: Only Admins or Sales can reassign
+    if (req.user.role !== "ADMIN" && req.user.department?.name !== "Sales Department") {
+      return next(
+        new ErrorHandler("Only Admins or Sales are permitted to reassign leads", 403),
+      );
+    }
+
+    // Validate the new assignee is from Sales or is an Admin
+    const newAssignee = await prisma.user.findUnique({
+      where: { id: assignedToId },
+      include: { department: { select: { name: true } } },
+    });
+    if (!newAssignee) {
+      return next(new ErrorHandler("Assigned user not found", 404));
+    }
+    if (newAssignee.role !== "ADMIN" && newAssignee.department?.name?.toLowerCase() !== "sales department") {
+      return next(
+        new ErrorHandler("Assigned user must be from the Sales department or be an Admin", 400),
+      );
+    }
+
+    updateData.assignedToId = assignedToId;
   }
 
   const updatedLead = await prisma.lead.update({
     where: { id },
-    data: {
-      status,
-      assignedToId, // 👈 2. Tell Prisma to swap the IDs
-    },
+    data: updateData,
     include: {
       assignedTo: { select: { name: true } },
     },

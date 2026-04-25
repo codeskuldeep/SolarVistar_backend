@@ -185,3 +185,44 @@ export const updateVisitStatus = catchAsyncError(async (req, res, next) => {
       ),
     );
 });
+
+// @desc    Save the geotagged site location for a visit
+// @route   PATCH /api/visits/:id/location
+// @access  Private
+// Rules:
+//   - If siteLocation is NOT yet set → always allow (first-time set)
+//   - If siteLocation IS already set → only allow if `force: true` in body (explicit user update)
+export const updateVisitLocation = catchAsyncError(async (req, res, next) => {
+  const { id } = req.params;
+  const { siteLocation, force = false } = req.body;
+
+  if (!siteLocation || typeof siteLocation !== "string" || !siteLocation.trim()) {
+    return next(new ErrorHandler("A valid siteLocation string is required", 400));
+  }
+
+  const existing = await prisma.visit.findUnique({
+    where: { id },
+    select: { id: true, siteLocation: true },
+  });
+
+  if (!existing) {
+    return next(new ErrorHandler("Visit not found", 404));
+  }
+
+  // Block overwrite unless user explicitly forced it
+  if (existing.siteLocation && !force) {
+    return res.status(200).json(
+      new ApiResponse(200, { visit: existing, skipped: true }, "Location already set — send force:true to update")
+    );
+  }
+
+  const updated = await prisma.visit.update({
+    where: { id },
+    data: { siteLocation: siteLocation.trim() },
+    select: { id: true, siteLocation: true },
+  });
+
+  res.status(200).json(
+    new ApiResponse(200, { visit: updated }, "Site location saved successfully")
+  );
+});

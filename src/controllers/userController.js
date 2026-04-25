@@ -41,9 +41,7 @@ export const createUser = catchAsyncError(async (req, res, next) => {
   }
 
   // Normalize department name (safe — only when provided)
-  const departmentName = department
-    ? department[0].toUpperCase() + department.slice(1).toLowerCase()
-    : null;
+  const departmentName = department ? department.trim() : null;
 
   // Validate department if creating a STAFF member
   if (role !== "ADMIN") {
@@ -171,5 +169,18 @@ export const getUsers = catchAsyncError(async (req, res, next) => {
       },
       "Users fetched successfully"
     )
+  );
+});
+
+// @desc    Get all departments
+// @route   GET /api/users/departments
+// @access  Private/Admin Only (Or Staff for dropdown)
+export const getDepartments = catchAsyncError(async (req, res, next) => {
+  const departments = await prisma.department.findMany({
+    orderBy: { createdAt: "asc" },
+  });
+
+  res.status(200).json(
+    new ApiResponse(200, { departments }, "Departments fetched successfully")
   );
 });
